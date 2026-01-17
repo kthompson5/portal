@@ -14,12 +14,14 @@
       background: black;
       overflow: hidden;
     }
+
     iframe {
       width: 100%;
       height: 100%;
       border: none;
     }
-    /* Invisible 1px video used for NoSleep fallback */
+
+    /* Invisible NoSleep video */
     #nosleep {
       position: fixed;
       width: 1px;
@@ -38,21 +40,23 @@
     src="https://devices.connectedroom.io/4b10106f-88d7-4bcc-bf10-723303870ac4/?display=1&t=zHSzMC46QiAvJ5GfXEbISdI1dzVI2Pe1">
   </iframe>
 
-  <!-- NoSleep fallback (may require one tap to start on some browsers) -->
+  <!-- Tiny silent looping MP4 (NoSleep fallback) -->
   <video id="nosleep" loop playsinline muted>
-    <!-- NOTE: This base64 is a placeholder; you need a real tiny mp4 base64 to use this method -->
-    <source src="data:video/mp4;base64,AAAA..." type="video/mp4" />
+    <source
+      src="data:video/mp4;base64,
+AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAAIZnJlZQAAACxtZGF0AAAAAQ==
+"
+      type="video/mp4">
   </video>
 
   <script>
     // -----------------------------
-    // 1) Wake Lock (best if supported)
+    // 1) Wake Lock API (best case)
     // -----------------------------
     let wakeLock = null;
 
     async function requestWakeLock() {
       try {
-        // Some browsers require this to be triggered by a user gesture.
         wakeLock = await navigator.wakeLock.request("screen");
         console.log("Wake Lock active");
 
@@ -66,61 +70,57 @@
       }
     }
 
-    // Try immediately
     if ("wakeLock" in navigator) {
       requestWakeLock();
-    } else {
-      console.log("Wake Lock API not supported");
     }
 
-    // Re-request when visible
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible" && "wakeLock" in navigator) {
         requestWakeLock();
       }
     });
 
-    // Retry occasionally in case it drops
     setInterval(() => {
-      if (!wakeLock && "wakeLock" in navigator) requestWakeLock();
+      if (!wakeLock && "wakeLock" in navigator) {
+        requestWakeLock();
+      }
     }, 60000);
 
     // -----------------------------
-    // 2) DOM heartbeat (lightweight)
+    // 2) DOM heartbeat
     // -----------------------------
     setInterval(() => {
       document.body.dataset.keepalive = String(Date.now());
     }, 60000);
 
     // -----------------------------
-    // 3) Iframe reload (most reliable activity)
+    // 3) Iframe reload (hard activity)
     // -----------------------------
     setInterval(() => {
       const iframe = document.getElementById("dash");
-      // Force reload without losing the URL
       iframe.src = iframe.src;
     }, 180000);
 
     // -----------------------------
-    // 4) NoSleep fallback attempt (optional)
+    // 4) NoSleep video start
     // -----------------------------
-    function tryStartNoSleepVideo() {
+    function startNoSleep() {
       const v = document.getElementById("nosleep");
       if (!v) return;
 
       v.play().then(() => {
         console.log("NoSleep video playing");
-      }).catch((e) => {
-        console.log("NoSleep video could not autoplay (may need a tap):", e);
+      }).catch(err => {
+        console.log("NoSleep autoplay blocked (tap once):", err);
       });
     }
 
-    // Try to start once on load
-    tryStartNoSleepVideo();
+    // Try on load
+    startNoSleep();
 
-    // If user taps anywhere, try again (helps if autoplay is blocked)
-    document.addEventListener("click", tryStartNoSleepVideo, { passive: true });
-    document.addEventListener("touchstart", tryStartNoSleepVideo, { passive: true });
+    // Retry on any user interaction
+    document.addEventListener("click", startNoSleep, { passive: true });
+    document.addEventListener("touchstart", startNoSleep, { passive: true });
   </script>
 </body>
 </html>
