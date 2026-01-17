@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Portal Dashboard</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
     html, body {
@@ -19,29 +19,108 @@
       height: 100%;
       border: none;
     }
+    /* Invisible 1px video used for NoSleep fallback */
+    #nosleep {
+      position: fixed;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      left: 0;
+      top: 0;
+    }
   </style>
 </head>
 
 <body>
+  <iframe
+    id="dash"
+    src="https://devices.connectedroom.io/4b10106f-88d7-4bcc-bf10-723303870ac4/?display=1&t=zHSzMC46QiAvJ5GfXEbISdI1dzVI2Pe1">
+  </iframe>
 
-<iframe
-  id="dash"
-  src="https://devices.connectedroom.io/4b10106f-88d7-4bcc-bf10-723303870ac4/?display=1&t=zHSzMC46QiAvJ5GfXEbISdI1dzVI2Pe1">
-</iframe>
+  <!-- NoSleep fallback (may require one tap to start on some browsers) -->
+  <video id="nosleep" loop playsinline muted>
+    <!-- NOTE: This base64 is a placeholder; you need a real tiny mp4 base64 to use this method -->
+    <source src="data:video/mp4;base64,AAAA..." type="video/mp4" />
+  </video>
 
-<script>
-  /* DOM heartbeat – runs every 60s */
-  setInterval(() => {
-    document.body.dataset.keepalive = Date.now();
-  }, 60000);
+  <script>
+    // -----------------------------
+    // 1) Wake Lock (best if supported)
+    // -----------------------------
+    let wakeLock = null;
 
-  /* Iframe reload – runs every 3 minutes */
-  setInterval(() => {
-    const iframe = document.getElementById("dash");
-    iframe.src = iframe.src;
-  }, 180000);
-</script>
+    async function requestWakeLock() {
+      try {
+        // Some browsers require this to be triggered by a user gesture.
+        wakeLock = await navigator.wakeLock.request("screen");
+        console.log("Wake Lock active");
 
+        wakeLock.addEventListener("release", () => {
+          console.log("Wake Lock released");
+          wakeLock = null;
+        });
+      } catch (err) {
+        console.log("Wake Lock failed:", err);
+        wakeLock = null;
+      }
+    }
+
+    // Try immediately
+    if ("wakeLock" in navigator) {
+      requestWakeLock();
+    } else {
+      console.log("Wake Lock API not supported");
+    }
+
+    // Re-request when visible
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && "wakeLock" in navigator) {
+        requestWakeLock();
+      }
+    });
+
+    // Retry occasionally in case it drops
+    setInterval(() => {
+      if (!wakeLock && "wakeLock" in navigator) requestWakeLock();
+    }, 60000);
+
+    // -----------------------------
+    // 2) DOM heartbeat (lightweight)
+    // -----------------------------
+    setInterval(() => {
+      document.body.dataset.keepalive = String(Date.now());
+    }, 60000);
+
+    // -----------------------------
+    // 3) Iframe reload (most reliable activity)
+    // -----------------------------
+    setInterval(() => {
+      const iframe = document.getElementById("dash");
+      // Force reload without losing the URL
+      iframe.src = iframe.src;
+    }, 180000);
+
+    // -----------------------------
+    // 4) NoSleep fallback attempt (optional)
+    // -----------------------------
+    function tryStartNoSleepVideo() {
+      const v = document.getElementById("nosleep");
+      if (!v) return;
+
+      v.play().then(() => {
+        console.log("NoSleep video playing");
+      }).catch((e) => {
+        console.log("NoSleep video could not autoplay (may need a tap):", e);
+      });
+    }
+
+    // Try to start once on load
+    tryStartNoSleepVideo();
+
+    // If user taps anywhere, try again (helps if autoplay is blocked)
+    document.addEventListener("click", tryStartNoSleepVideo, { passive: true });
+    document.addEventListener("touchstart", tryStartNoSleepVideo, { passive: true });
+  </script>
 </body>
 </html>
-
