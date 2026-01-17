@@ -21,19 +21,27 @@
     }
   </style>
 </head>
+
 <body>
 
-<iframe id="dash"
+<iframe
+  id="dash"
   src="https://devices.connectedroom.io/4b10106f-88d7-4bcc-bf10-723303870ac4/?display=1&t=zHSzMC46QiAvJ5GfXEbISdI1dzVI2Pe1">
 </iframe>
 
 <script>
-  // Hard reload iframe every 3 minutes
+  /* DOM heartbeat – runs every 60s */
+  setInterval(() => {
+    document.body.dataset.keepalive = Date.now();
+  }, 60000);
+
+  /* Iframe reload – runs every 3 minutes */
   setInterval(() => {
     const iframe = document.getElementById("dash");
     iframe.src = iframe.src;
-  }, 180000); // 3 minutes
+  }, 180000);
 </script>
 
 </body>
 </html>
+
