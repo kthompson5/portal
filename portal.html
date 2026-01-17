@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Portal Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      background: black;
+      overflow: hidden;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+<iframe id="dash"
+  src="https://devices.connectedroom.io/4b10106f-88d7-4bcc-bf10-723303870ac4/?display=1&t=zHSzMC46QiAvJ5GfXEbISdI1dzVI2Pe1">
+</iframe>
+
+<script>
+  // Hard reload iframe every 3 minutes
+  setInterval(() => {
+    const iframe = document.getElementById("dash");
+    iframe.src = iframe.src;
+  }, 180000); // 3 minutes
+</script>
+
+</body>
+</html>
